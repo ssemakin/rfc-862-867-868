@@ -42,11 +42,8 @@ public class ServerUDP extends UntypedActor {
             manager.tell(msg, getSelf());
         } else if (msg instanceof Udp.Received) {
             final Udp.Received r = (Udp.Received) msg;
-// echo server example: send back the data
-            manager.tell(UdpMessage.send(r.data(), r.sender()), getSelf());
-// or do some processing and forward it on
-//                    final Object processed = "bye dude!!!"; // parse data etc., e.g. using PipelineStage
-//                            nextActor.tell(processed, getSelf());
+            final ActorRef handler = getContext().actorOf(Props.create(SimplisticHandler.class));
+            handler.tell(r, getSender());
         } else if (msg.equals(UdpMessage.unbind())) {
             manager.tell(msg, getSelf());
         } else if (msg instanceof Udp.Unbound) {
