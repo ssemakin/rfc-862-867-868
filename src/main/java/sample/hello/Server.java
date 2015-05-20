@@ -40,6 +40,6 @@ public class Server extends UntypedActor {
             manager.tell(conn, getSelf());
             final ActorRef handler = getContext().actorOf(Props.create(SimplisticHandler.class));
             getSender().tell(TcpMessage.register(handler), getSelf());
-        }
+        } else unhandled(msg);
     }
 }
