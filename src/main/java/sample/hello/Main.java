@@ -13,7 +13,7 @@ public class Main {
         ActorSystem system = ActorSystem.create("Hello");
 
         final ActorRef tcpManager = Tcp.get(system).manager();
-        ActorRef a = system.actorOf(Props.create(Server.class, tcpManager), "server-tcp");
+        ActorRef a = system.actorOf(Props.create(ServerTCP.class, tcpManager), "server-tcp");
 
         final ActorRef udpManager = Udp.get(system).manager();
         ActorRef b = system.actorOf(Props.create(ServerUDP.class, udpManager), "server-udp");
@@ -49,6 +49,8 @@ public class Main {
 		public void onReceive(Object msg) {
 			if (msg instanceof Terminated) {
                 if(ref.isTerminated() && ref2.isTerminated()) {
+//                    log.info("{} has terminated, shutting down system", ref.path());
+//                    log.info("{} has terminated, shutting down system", ref2.path());
                     getContext().system().terminate();
                 }
 			} else unhandled(msg);

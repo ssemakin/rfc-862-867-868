@@ -4,20 +4,20 @@ import java.net.InetSocketAddress;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
+import akka.event.Logging;
+import akka.event.LoggingAdapter;
 import akka.io.Tcp;
 import akka.io.TcpMessage;
 import sample.hello.handler.Daytime867Handler;
 
-public class Server extends UntypedActor {
+public class ServerTCP extends UntypedActor {
+
+    private final LoggingAdapter log = Logging.getLogger(getContext().system(), this);
 
     final ActorRef manager;
 
-    public Server(ActorRef manager) {
+    public ServerTCP(ActorRef manager) {
         this.manager = manager;
-    }
-
-    public static Props props(ActorRef manager) {
-        return Props.create(Server.class, manager);
     }
 
     @Override
@@ -28,7 +28,7 @@ public class Server extends UntypedActor {
 
     @Override
     public void onReceive(Object msg) throws Exception {
-        System.out.println("tcp server got message " + msg);
+        log.info("{} server got message {}", getSelf().path(), msg);
         if (msg instanceof Tcp.Bound) {
             manager.tell(msg, getSelf());
         } else if (msg instanceof Tcp.CommandFailed) {
