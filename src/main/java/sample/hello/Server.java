@@ -5,10 +5,8 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
 import akka.io.Tcp;
-import akka.io.Tcp.Bound;
-import akka.io.Tcp.CommandFailed;
-import akka.io.Tcp.Connected;
 import akka.io.TcpMessage;
+import sample.hello.handler.Daytime867Handler;
 
 public class Server extends UntypedActor {
 
@@ -38,7 +36,7 @@ public class Server extends UntypedActor {
         } else if (msg instanceof Tcp.Connected) {
             final Tcp.Connected conn = (Tcp.Connected) msg;
             manager.tell(conn, getSelf());
-            final ActorRef handler = getContext().actorOf(Props.create(SimplisticHandler.class));
+            final ActorRef handler = getContext().actorOf(Props.create(Daytime867Handler.class));
             getSender().tell(TcpMessage.register(handler), getSelf());
         } else unhandled(msg);
     }

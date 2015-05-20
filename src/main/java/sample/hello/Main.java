@@ -1,7 +1,6 @@
 package sample.hello;
 
 import akka.actor.*;
-import akka.actor.dsl.Creators;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import akka.io.Tcp;
@@ -50,8 +49,6 @@ public class Main {
 		public void onReceive(Object msg) {
 			if (msg instanceof Terminated) {
                 if(ref.isTerminated() && ref2.isTerminated()) {
-//                    log.info("{} has terminated, shutting down system", ref.path());
-//                    log.info("{} has terminated, shutting down system", ref2.path());
                     getContext().system().terminate();
                 }
 			} else unhandled(msg);
