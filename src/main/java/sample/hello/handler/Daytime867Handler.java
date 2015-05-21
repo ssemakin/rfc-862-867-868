@@ -6,11 +6,7 @@ import akka.io.TcpMessage;
 import akka.io.Udp;
 import akka.io.UdpMessage;
 import akka.util.ByteString;
-
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 public class Daytime867Handler extends UntypedActor {

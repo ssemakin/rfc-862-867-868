@@ -1,28 +1,32 @@
 package sample.hello;
 
 import java.net.InetSocketAddress;
+import java.util.function.Supplier;
+
 import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import akka.io.*;
-import sample.hello.handler.Echo862Handler;
 
 public class ServerUDP extends UntypedActor {
 
     private final LoggingAdapter log = Logging.getLogger(getContext().system(), this);
+    private final ActorRef manager;
+    private final int port;
+    private final Supplier<Props> handlerFactory;
 
-    final ActorRef manager;
-
-    public ServerUDP(ActorRef manager) {
-        this.manager = manager;
+    public ServerUDP(ActorSystem system, int port, Supplier<Props> handlerFactory) {
+        this.manager = Udp.get(system).manager();
+        this.port = port;
+        this.handlerFactory = handlerFactory;
     }
 
     @Override
     public void preStart() throws Exception {
-        final ActorRef udp = Udp.get(getContext().system()).manager();
-        udp.tell(UdpMessage.bind(getSelf(), new InetSocketAddress("localhost", 1234)), getSelf());
+        manager.tell(UdpMessage.bind(getSelf(), new InetSocketAddress("localhost", port)), getSelf());
     }
 
     @Override
@@ -32,7 +36,7 @@ public class ServerUDP extends UntypedActor {
             manager.tell(msg, getSelf());
         } else if (msg instanceof Udp.Received) {
             final Udp.Received r = (Udp.Received) msg;
-            final ActorRef handler = getContext().actorOf(Props.create(Echo862Handler.class));
+            final ActorRef handler = getContext().actorOf(handlerFactory.get());
             handler.tell(r, getSender());
         } else if (msg.equals(UdpMessage.unbind())) {
             manager.tell(msg, getSelf());

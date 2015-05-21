@@ -3,58 +3,75 @@ package sample.hello;
 import akka.actor.*;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
-import akka.io.Tcp;
-import akka.io.Udp;
+import sample.hello.handler.Daytime867Handler;
+import sample.hello.handler.Echo862Handler;
+import sample.hello.handler.Time868Handler;
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.Supplier;
 
 public class Main {
 
+
     public static void main(String[] args) {
 
-        ActorSystem system = ActorSystem.create("Hello");
+        final int[] ports = Arrays.stream(args).mapToInt(Integer::parseInt).distinct().toArray();
+        if(ports.length != 3) {
+            System.exit(1);
+        }
 
-        final ActorRef tcpManager = Tcp.get(system).manager();
-        ActorRef a = system.actorOf(Props.create(ServerTCP.class, tcpManager), "server-tcp");
+        final ActorSystem system = ActorSystem.create("tcp-udp");
 
-        final ActorRef udpManager = Udp.get(system).manager();
-        ActorRef b = system.actorOf(Props.create(ServerUDP.class, udpManager), "server-udp");
+        final Supplier<Props> echo = () -> Props.create(Echo862Handler.class);
+        final Supplier<Props> time = () -> Props.create(Time868Handler.class);
+        final Supplier<Props> daytime = () -> Props.create(Daytime867Handler.class);
 
-        ActorRef t = system.actorOf(Props.create(Terminator.class, a, b), "terminator");
+        final List<ActorRef> actors =
+            Arrays.asList(
+                system.actorOf(Props.create(ServerTCP.class, system, ports[0], echo), "server-tcp-echo-" + ports[0]),
+                system.actorOf(Props.create(ServerUDP.class, system, ports[0], echo), "server-udp-echo-" + ports[0]),
+                system.actorOf(Props.create(ServerTCP.class, system, ports[1], time), "server-tcp-time-" + ports[1]),
+                system.actorOf(Props.create(ServerUDP.class, system, ports[1], time), "server-udp-time-" + ports[1]),
+                system.actorOf(Props.create(ServerTCP.class, system, ports[2], daytime), "server-tcp-daytime-" + ports[2]),
+                system.actorOf(Props.create(ServerUDP.class, system, ports[2], daytime), "server-udp-daytime-" + ports[2])
+            );
 
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            @Override
-            public void run() {
-                system.stop(a);
-                system.stop(b);
-                system.awaitTermination();
-            }
-        });
-
+        final ActorRef terminator = system.actorOf(Props.create(Terminator.class, actors), "terminator");
         system.awaitTermination();
     }
 
     public static class Terminator extends UntypedActor {
 
 		private final LoggingAdapter log = Logging.getLogger(getContext().system(), this);
-		private final ActorRef ref;
-        private final ActorRef ref2;
+		private final List<ActorRef> servers;
 
-		public Terminator(ActorRef ref, ActorRef ref2) {
-			this.ref = ref;
-            this.ref2 = ref2;
-			getContext().watch(ref);
-            getContext().watch(ref2);
+		public Terminator(List<ActorRef> servers) {
+            this.servers = servers;
+            this.servers.stream().forEach(s -> getContext().watch(s));
+            setupSignalHandler();
 		}
 
-		@Override
+        private void stopServers() {
+            servers.stream().forEach(s -> getContext().system().stop(s));
+        }
+
+        private void setupSignalHandler() {
+            Runtime.getRuntime().addShutdownHook(new Thread() {
+                @Override
+                public void run() {
+                    stopServers();
+                    getContext().system().awaitTermination();
+                }
+            });
+        }
+
+        @Override
 		public void onReceive(Object msg) {
 			if (msg instanceof Terminated) {
-                if(ref.isTerminated() && ref2.isTerminated()) {
-//                    log.info("{} has terminated, shutting down system", ref.path());
-//                    log.info("{} has terminated, shutting down system", ref2.path());
+                if(servers.stream().allMatch(s -> s.isTerminated())) {
                     getContext().system().terminate();
                 }
 			} else unhandled(msg);
 		}
-
 	}
 }
